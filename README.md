@@ -35,6 +35,9 @@ PIL
 torch
 cv2
 huggingface_hub
+sentence_transformers
+sklearn
+numpy
 
 
 # Implementing BLIP on videos 
@@ -59,3 +62,68 @@ while True:
             break
 
 
+# Filtering Duplicate Captions
+
+captions = [
+    "A man is riding a horse.",
+    "Someone is on a horse.",
+    "The man rides the horse across the field.",
+    "A woman is cooking in the kitchen.",
+    "a large stadium filled with lots of people",
+    "A large stadium packed with a lively crowd watches fireworks light up the sky",
+    "Someone is preparing food inside the house."
+]
+### Load pre-trained model
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
+ embeddings = model.encode(captions)
+### Define threshold for similarity (between 0 and 1)
+    SIMILARITY_THRESHOLD = 0.7
+
+### Keep unique captions
+ unique_captions = []
+removed_captions = []
+### Track which captions we've already considered
+used = set()
+for i, emb1 in enumerate(embeddings):
+        if i in used:
+            continue
+
+unique_captions.append(captions[i])
+        
+for j in range(i + 1, len(embeddings)):
+            if j not in used:
+                sim = cosine_similarity([emb1], [embeddings[j]])[0][0]
+                if sim >= SIMILARITY_THRESHOLD:
+                    removed_captions.append((captions[i], captions[j], sim))
+                    used.add(j)
+
+
+
+# Finally is the video summary using LlaMa3
+## Command to install llama on your local machine
+ ollama pull llama3
+## Command to start llama 
+ollama run llama3
+## Prompt to generate summary manually
+ prompt ollama run llama3 "Write a fantasy story based on: a man riding a horse, fireworks in a stadium, a child watching the moon."
+
+## Script to automate the generation of video summary
+import subprocess
+
+# prompt = """
+# Write a story combining:
+# - A man is riding a horse.
+# - A stadium full of people watching fireworks.
+# - A woman cooking dinner.
+# """
+
+def get_prompts(capitons):
+    # prompt = get_prompts()
+    result = subprocess.run(
+        ["ollama", "run", "llama3"],
+        input=captions.encode(),
+        capture_output=True
+    )
+    print(result.stdout.decode())
+    return result
